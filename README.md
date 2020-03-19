@@ -174,7 +174,7 @@ var options = {
 - `EXCLUDED`: The component was excluded.
 
 
-## Upgrade guide from 1.8.2 to 2.0.0
+<!-- ## Upgrade guide from 1.8.2 to 2.0.0
 
 ### Backwards compatibility mode
 
@@ -241,9 +241,9 @@ var options = {
         }
     ]
 }
-```
+``` -->
 
-### jsfonts and flashFonts
+<!-- ### jsfonts and flashFonts
 
 jsfonts has been renamed into fonts. fontsFlash and fonts are now separate components. `fontsFlash` is excluded by default.
 
@@ -265,7 +265,7 @@ Fingerprint2.EXCLUDED = 'excluded'
 
 ### audioTimeout
 
-audioTimeout is an option, default 1000ms
+audioTimeout is an option, default 1000ms -->
 
 ## Development
 
@@ -309,7 +309,7 @@ To run all configurations (requires Chrome, Firefox and Safari installed), run:
 To run the tests in the browser manually, open the `spec_runner.html` page in your browser.
 
 
-## Other
+<!-- ## Other
 
 ### Future development
 
@@ -332,8 +332,8 @@ Many more fingerprinting sources will be implemented, such as (in no particular 
 
 * Download [Adobe Flex SDK](http://www.adobe.com/devnet/flex/flex-sdk-download.html)
 * Unzip it, add the `bin/` directory to your `$PATH`  (mxmlc binary should be in path)
-* Run `make`
-
+* Run `make` -->
+<!-- 
 ### Talk about the library (in Russian) on FrontEnd Conf 2015
 
 https://player.vimeo.com/video/151208427
@@ -352,4 +352,4 @@ https://player.vimeo.com/video/151208427
 
 This software contains code from open-source projects:
 
-* MurmurHash3 by Karan Lyons (https://github.com/karanlyons/murmurHash3.js)
+* MurmurHash3 by Karan Lyons (https://github.com/karanlyons/murmurHash3.js) -->
