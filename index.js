@@ -33,8 +33,6 @@ function canEnumerateMediaDevice() {
 }
 
 function checkDeviceSupport(callback) {
-
-
   if (!canEnumerateMediaDevice) {
       return;
   }
