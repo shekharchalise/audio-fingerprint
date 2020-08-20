@@ -139,6 +139,12 @@ function showDetails(details) {
   document.querySelector("#details").textContent = info
 }
 
+function detectRTC() {
+  DetectRTC.load(function() {
+    console.log(DetectRTC);
+  });
+}
+
 document.querySelector("#btn").addEventListener("click", function () {
   fingerprintReport().then(details => {
     checkDeviceSupport(() => {
@@ -150,6 +156,7 @@ document.querySelector("#btn").addEventListener("click", function () {
         { 'key': 'isWebcamAlreadyCaptured', 'value' : isWebcamAlreadyCaptured }     
       )
       showDetails(details);
+      detectRTC();
     });
   })
 });
