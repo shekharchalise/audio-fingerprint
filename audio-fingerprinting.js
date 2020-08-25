@@ -6,6 +6,7 @@ var audioFingerprint = (function () {
 	var compressor = null;
 	var fingerprint = null;
 	var callback = null
+
 	
 	function run(cb, debug = false) {
 		
@@ -37,14 +38,14 @@ var audioFingerprint = (function () {
 	{
 		// for cross browser 
 		var audioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-		context = new audioContext(1, 44100, 44100);
+		context = new audioContext(1, 44100, 44100); // number of channels, length, sampleRate
 	}
 
 	 // The OscillatorNode interface represents a periodic waveform, such as a sine wave. It is an
 	function setOscillator()
 	{
 		oscillator = context.createOscillator(); // create Oscillator node
-		oscillator.type = "sine";  // A sine wave. This is the default value. 
+		oscillator.type = "triangle";  // A sine wave. This is the default value. 
 		// square // A square wave with a duty cycle of 0.5; that is, the signal is "high" for half of each period. // sawtooth // triangle // custom
 		oscillator.frequency.setValueAtTime(10000, currentTime);  // value in hertz
 	}
@@ -86,10 +87,8 @@ var audioFingerprint = (function () {
 	{
 		var output = null;
 		for (var i = 4500; 5e3 > i; i++) {
-			
 			var channelData = event.renderedBuffer.getChannelData(0)[i];
 			output += Math.abs(channelData);
-			
 		}
 		
 		fingerprint = output.toString();
