@@ -1,48 +1,56 @@
 body {
-  font-family: sans-serif;
-  max-width: 48em;
-  margin: auto;
-  padding: 0 5%;
-  background: #222;
-  color: #fff;
+    font-family: sans-serif;
+    max-width: 48em;
+    margin: auto;
+    padding: 0 5%;
+    background: #222;
+    color: #fff;
 }
 
 h1 {
-  margin: 2em 0 0;
+    margin: 2em 0 0;
 }
 
 p {
-  font-size: 1.2em
+    font-size: 1.2em
 }
 
 button {
-  border: none;
-  color: #fff;
-  font-size: 1.2em;
-  background: #27e;
-  padding: 0.5em 0.75em 0.6em;
-  border-radius: 3px;
-  box-shadow: 0 3px 0 #05c;
-  outline: none;
+    border: none;
+    color: #fff;
+    font-size: 1.2em;
+    background: #27e;
+    padding: 0.5em 0.75em 0.6em;
+    border-radius: 3px;
+    box-shadow: 0 3px 0 #05c;
+    outline: none;
 }
 
 button:active {
-  transform: translateY(3px);
-  box-shadow: none;
+    transform: translateY(3px);
+    box-shadow: none;
 }
 
 strong {
-  display: block;
-  letter-spacing: 1px;
-  word-wrap: break-word;
+    display: block;
+    letter-spacing: 1px;
+    word-wrap: break-word;
 }
 
 @media (min-width: 32em) {
-  h1 {
-    font-size: 4em;
-  }
+    h1 {
+        font-size: 4em;
+    }
+    strong {
+        font-size: 1.5em;
+    }
+}
 
-  strong {
-    font-size: 1.5em;
-  }
+pre {
+    font-family: "courier new", courier, mono;
+    font-size: 14px;
+    background-color: #222;
+    padding: 10px 15px 10px 15px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
 }
