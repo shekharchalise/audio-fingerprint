@@ -15,15 +15,18 @@ function get_result(element_id) {
     return pre.innerHTML;
 }
 
-// Performs fingerprint as found in https://client.a.pxi.pub/PXmssU3ZQ0/main.min.js
-var pxi_output;
-var pxi_full_buffer;
+var sum_buffer;
+var full_buffer_hash;
+var context_properties_string;
+var context_properties;
+var oscillator_node = [];
+var hybrid_oscillator_node = [];
 
 async function setContext() {
     try {
         if (context = new(window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100), !context) {
             set_result("no_fp", "sum-buffer");
-            pxi_output = 0;
+            sum_buffer = 0;
         }
 
         // Create oscillator
@@ -48,22 +51,22 @@ async function setContext() {
         pxi_oscillator.start(0);
         context.startRendering();
         context.oncomplete = function(evnt) {
-            pxi_output = 0;
+            sum_buffer = 0;
             var sha1 = CryptoJS.algo.SHA1.create();
             for (var i = 0; i < evnt.renderedBuffer.length; i++) {
                 sha1.update(evnt.renderedBuffer.getChannelData(0)[i].toString());
             }
             hash = sha1.finalize();
-            pxi_full_buffer_hash = hash.toString(CryptoJS.enc.Hex);
-            set_result(pxi_full_buffer_hash, "hash-full-buffer");
+            full_buffer_hash = hash.toString(CryptoJS.enc.Hex);
+            set_result(full_buffer_hash, "full-buffer-hash");
             for (var i = 4500; 5e3 > i; i++) {
-                pxi_output += Math.abs(evnt.renderedBuffer.getChannelData(0)[i]);
+                sum_buffer += Math.abs(evnt.renderedBuffer.getChannelData(0)[i]);
             }
-            set_result(pxi_output.toString(), "sum-buffer");
+            set_result(sum_buffer, "sum-buffer");
             pxi_compressor.disconnect();
         }
     } catch (u) {
-        pxi_output = 0;
+        sum_buffer = 0;
         set_result("no_fp", "sum-buffer");
     }
 }
@@ -76,29 +79,24 @@ function a(a, b, c) {
     return a
 }
 
-var nt_vc_output;
-
 async function getAudioContextProperties() {
     try {
         var nt_vc_context = window.AudioContext || window.webkitAudioContext;
-        if ("function" !== typeof nt_vc_context) nt_vc_output = "Not available";
+        if ("function" !== typeof nt_vc_context) context_properties = "Not available";
         else {
             var f = new nt_vc_context,
                 d = f.createAnalyser();
-            nt_vc_output = a({}, f, "ac-");
-            nt_vc_output = a(nt_vc_output, f.destination, "ac-");
-            nt_vc_output = a(nt_vc_output, f.listener, "ac-");
-            nt_vc_output = a(nt_vc_output, d, "an-");
-            nt_vc_output = window.JSON.stringify(nt_vc_output, undefined, 2);
+            context_properties = a({}, f, "ac-");
+            context_properties = a(context_properties, f.destination, "ac-");
+            context_properties = a(context_properties, f.listener, "ac-");
+            context_properties = a(context_properties, d, "an-");
+            context_properties_string = window.JSON.stringify(context_properties, undefined, 2);
         }
     } catch (g) {
-        nt_vc_output = 0
+        context_properties = 0
     }
-    set_result(nt_vc_output, 'context-properties')
+    set_result(context_properties_string, 'context-properties')
 }
-
-// Performs fingerprint as found in https://www.cdn-net.com/cc.js
-var cc_output = [];
 
 async function getOscillatorNodeFingerprint() {
     var audioCtx = new(window.AudioContext || window.webkitAudioContext),
@@ -119,20 +117,17 @@ async function getOscillatorNodeFingerprint() {
         bins = new Float32Array(analyser.frequencyBinCount);
         analyser.getFloatFrequencyData(bins);
         for (var i = 0; i < bins.length; i = i + 1) {
-            cc_output.push(bins[i]);
+            oscillator_node.push(bins[i]);
         }
-        //cc_output.extend(bins);
+        //oscillator_node.extend(bins);
         analyser.disconnect();
         scriptProcessor.disconnect();
         gain.disconnect();
-        set_result(cc_output.slice(0, 30), 'oscillator-node');
+        set_result(oscillator_node.slice(0, 30), 'oscillator-node');
     };
 
     oscillator.start(0);
 }
-
-// Performs a hybrid of cc/pxi methods found above
-var hybrid_output = [];
 
 async function getHybridFingerprint() {
     var audioCtx = new(window.AudioContext || window.webkitAudioContext),
@@ -162,48 +157,46 @@ async function getHybridFingerprint() {
         bins = new Float32Array(analyser.frequencyBinCount);
         analyser.getFloatFrequencyData(bins);
         for (var i = 0; i < bins.length; i = i + 1) {
-            hybrid_output.push(bins[i]);
+            hybrid_oscillator_node.push(bins[i]);
         }
         analyser.disconnect();
         scriptProcessor.disconnect();
         gain.disconnect();
-        set_result(hybrid_output.slice(0, 30), 'hybrid-oscillator-node');
-        //draw_fp(bins);
+        set_result(hybrid_oscillator_node.slice(0, 30), 'hybrid-oscillator-node');
     };
     oscillator.start(0);
-    return new Promise((resolve, reject) => {
-        console.log('Initial');
-        resolve(hybrid_output.slice(0, 30));
-    })
 }
 
-async function addToFirebase() {
+function addToFirebase() {
     var app = firebase.initializeApp(firebaseConfig);
     db = firebase.firestore(app);
     var docData = {
-        stringExample: "Hello world!",
-        booleanExample: true,
-        numberExample: 3.14159265,
-        dateExample: firebase.firestore.Timestamp.fromDate(new Date("December 10, 1815")),
-        arrayExample: [5, true, "hello"],
-        nullExample: null,
-        objectExample: {
-            a: 5,
-            b: {
-                nested: "foo"
-            }
-        }
+        "context-properties": context_properties,
+        "full-buffer-hash": full_buffer_hash,
+        "hybrid-oscillator-node": hybrid_oscillator_node,
+        "oscillator-node": oscillator_node,
+        "sum-buffer": sum_buffer
+
     };
-    db.collection("data").doc("one").set(docData).then(function() {
+    db.collection("fingerprints").doc(full_buffer_hash).set(docData).then(function() {
         console.log("Document successfully written!");
     });
-
 }
 
-async function getFingerPrints() {
-    await addToFirebase();
-    await setContext();
-    await getAudioContextProperties();
-    await getOscillatorNodeFingerprint();
-    await getHybridFingerprint()
+function getFingerPrints() {
+    setTimeout(function() {
+        setContext();
+    }, 0);
+    setTimeout(function() {
+        getAudioContextProperties();
+    }, 1000);
+    setTimeout(function() {
+        getOscillatorNodeFingerprint();
+    }, 2000);
+    setTimeout(function() {
+        getHybridFingerprint();
+    }, 3000);
+    setTimeout(function() {
+        addToFirebase();
+    }, 4000);
 }
