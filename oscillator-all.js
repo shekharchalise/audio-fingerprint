@@ -5,7 +5,7 @@ Array.prototype.extend = function(other_array) {
 };
 
 function set_result(result, element_id) {
-    console.log("AudioContext Property FP:", result);
+    //console.log("AudioContext Property FP:", result);
     pre = document.getElementById(element_id);
     pre.innerHTML = result;
 }
@@ -167,6 +167,44 @@ async function getHybridFingerprint() {
     oscillator.start(0);
 }
 
+
+function setCookie(cname,cvalue,exdays) {
+    var d = new Date();
+    d.setTime(d.getTime() + (exdays*24*60*60*1000));
+    var expires = "expires=" + d.toGMTString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+
+}
+
+function getCookie(cname) {
+    var name = cname + "=";
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var ca = decodedCookie.split(';');
+    for(var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
+
+function checkCookie() {
+    var fingerprint = getCookie("audio-fingerprint");
+    if (fingerprint != "") {
+        return true;
+    }
+    else {
+        if (fingerprint != "" && fingerprint != null) {
+            return false;
+        }
+    }
+    return false;;
+}
+
 function addToFirebase() {
     var app = firebase.initializeApp(firebaseConfig);
     db = firebase.firestore(app);
@@ -180,6 +218,14 @@ function addToFirebase() {
     };
     db.collection("fingerprints").doc(full_buffer_hash).set(docData).then(function() {
         console.log("Document successfully written!");
+        if (!checkCookie()) {
+            setCookie("audio-fingerprint", full_buffer_hash, 30);
+        } else {
+            cookieFingerPrint = getCookie("audio-fingerprint");
+            if (cookieFingerPrint !== full_buffer_hash) {
+                setCookie("audio-fingerprint", full_buffer_hash, 30);
+            }
+        }
     });
 }
 
