@@ -1,3 +1,4 @@
+
 Array.prototype.extend = function(other_array) {
     other_array.forEach(function(v) {
         this.push(v);
@@ -192,40 +193,60 @@ function getCookie(cname) {
     return "";
 }
 
-function checkCookie() {
-    var fingerprint = getCookie("audio-fingerprint");
-    if (fingerprint != "") {
-        return true;
-    }
-    else {
-        if (fingerprint != "" && fingerprint != null) {
-            return false;
-        }
-    }
-    return false;;
+// function checkCookie() {
+//     var fingerprint = getCookie("audio-fingerprint");
+//     if (fingerprint != "") {
+//         return true;
+//     }
+//     else {
+//         if (fingerprint != "" && fingerprint != null) {
+//             return false;
+//         }
+//     }
+//     return false;;
+// }
+
+// if (!checkCookie()) {
+//     setCookie("audio-fingerprint", full_buffer_hash, 30);
+// } else {
+//     cookieFingerPrint = getCookie("audio-fingerprint");
+//     if (cookieFingerPrint !== full_buffer_hash) {
+//         setCookie("audio-fingerprint", full_buffer_hash, 30);
+//     }
+// }
+
+function getFingerPrintReport() {
+    var d1 = new Date()
+    return Fingerprint2.getPromise().then(function (components) {
+        var murmur = Fingerprint2.x64hash128(components.map(function (pair) { return pair.value }).join(), 31)
+        var d2 = new Date()
+        var time = d2 - d1
+        components = components.reduce((obj, item) => (obj[item.key] = item.value, obj) ,{});
+        return {components , time, murmur}
+    });
 }
 
 function addToFirebase() {
-    var app = firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore(app);
-    var docData = {
-        "context-properties": context_properties,
-        "full-buffer-hash": full_buffer_hash,
-        "hybrid-oscillator-node": hybrid_oscillator_node,
-        "oscillator-node": oscillator_node,
-        "sum-buffer": sum_buffer
+    if (!firebase.apps.length) {
+        var app = firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore(app);
+    }
 
-    };
-    db.collection("fingerprints").doc(full_buffer_hash).set(docData).then(function() {
-        console.log("Document successfully written!");
-        if (!checkCookie()) {
-            setCookie("audio-fingerprint", full_buffer_hash, 30);
-        } else {
-            cookieFingerPrint = getCookie("audio-fingerprint");
-            if (cookieFingerPrint !== full_buffer_hash) {
-                setCookie("audio-fingerprint", full_buffer_hash, 30);
-            }
-        }
+    getFingerPrintReport().then(fp => {
+        console.log(fp)
+        var docData = {
+            "context-properties": context_properties,
+            "full-buffer-hash": full_buffer_hash,
+            "hybrid-oscillator-node": hybrid_oscillator_node,
+            "oscillator-node": oscillator_node,
+            "sum-buffer": sum_buffer,
+            "userAgent": fp.components.userAgent ?  fp.components.userAgent : null,
+            "murmur": fp.murmur ? fp.murmur: null
+        };
+        db.collection("fingerprints").doc(full_buffer_hash).set(docData).then(function() {
+            console.log("Document successfully written!");
+            
+        });
     });
 }
 
