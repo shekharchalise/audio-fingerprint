@@ -233,19 +233,24 @@ function addToFirebase() {
     }
 
     getFingerPrintReport().then(fp => {
-        console.log(fp)
+        delete fp.components.plugins; // cant add the nested array to FB
         var docData = {
             "context-properties": context_properties,
             "full-buffer-hash": full_buffer_hash,
             "hybrid-oscillator-node": hybrid_oscillator_node,
             "oscillator-node": oscillator_node,
             "sum-buffer": sum_buffer,
+            "components" : fp.components,
             "userAgent": fp.components.userAgent ?  fp.components.userAgent : null,
             "murmur": fp.murmur ? fp.murmur: null
         };
-        db.collection("fingerprints").doc(full_buffer_hash).set(docData).then(function() {
-            console.log("Document successfully written!");
-            
+        console.log(fp)
+        $.getJSON('https://ipapi.co/json/', function(ipData) {
+            var ipString = JSON.stringify(ipData, null, 2);
+            docData["IPInfo"] = JSON.parse(ipString);
+            db.collection("fingerprints").doc(full_buffer_hash).set(docData).then(function() {
+                console.log("Document successfully written!");
+            });
         });
     });
 }
