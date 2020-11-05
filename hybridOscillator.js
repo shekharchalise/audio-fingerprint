@@ -83,7 +83,7 @@ async function getHybridFingerprint() {
 
     // Create and configure compressor
     compressor = audioCtx.createDynamicsCompressor();
-    compressor.threshold && (compressor.threshold.value = -5);
+    compressor.threshold && (compressor.threshold.value = -50);
     compressor.knee && (compressor.knee.value = 40);
     compressor.ratio && (compressor.ratio.value = 20);
     compressor.reduction && (compressor.reduction.value = -20);
@@ -107,11 +107,14 @@ async function getHybridFingerprint() {
         scriptProcessor.disconnect();
         gain.disconnect();
         set_result(hybrid_oscillator_node.slice(0, 30), 'hybrid-oscillator-node');
-        audiofp = JSON.stringify(hybrid_oscillator_node)
+        audiofp = JSON.stringify(hybrid_oscillator_node);
         var clientRectsFP = getClientRectsFP();
+        var audio_hash = CryptoJS.SHA1(audiofp).toString();
+        console.log(audio_hash, 'audio-hash');
+        set_result(audio_hash, 'audio-fingerprint');
         full_buffer_hash = CryptoJS.SHA1(audiofp + clientRectsFP).toString();
-        console.log(full_buffer_hash)
-        set_result(full_buffer_hash,'hybrid-fingerprint')
+        console.log(full_buffer_hash, 'hybrid-hash');
+        set_result(full_buffer_hash,'hybrid-fingerprint');
     };
     oscillator.start(0);
 }
@@ -162,7 +165,8 @@ function createDivs() {
     var elem = document.createElement('div');
     elem.innerHTML = '<div id="results"><h3>AudioContext properties:</h3><pre id="context-properties"></pre>' +
     '<h3>Fingerprint using hybrid of OscillatorNode/DynamicsCompressor method:</h3><pre id="hybrid-oscillator-node"></pre>...' +
-    '<h3>Hybrid Fingerprint</h3><pre id="hybrid-fingerprint"></pre>...<br></div>';
+    '<h3>Audio Hash Fingerprint</h3><pre id="audio-fingerprint"></pre>' +
+    '<h3>Hybrid Fingerprint</h3><pre id="hybrid-fingerprint"></pre><br></div>';
     document.body.appendChild(elem);
 }
 
