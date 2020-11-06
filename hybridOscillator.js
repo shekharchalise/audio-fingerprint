@@ -1,5 +1,5 @@
 var sum_buffer;
-var full_buffer_hash;
+var hybrid_hash;
 var context_properties_string;
 var context_properties;
 var hybrid_oscillator_node = [];
@@ -74,8 +74,7 @@ var getClientRectsFP = function() {
     return uuid;
 };
 
-async function getHybridFingerprint() {
-    console.log("test")
+async function getHybridAudioFingerprint(callback) {
     hybrid_oscillator_node = [];
     var audioCtx = new(window.AudioContext || window.webkitAudioContext),
         oscillator = audioCtx.createOscillator(),
@@ -109,15 +108,8 @@ async function getHybridFingerprint() {
         analyser.disconnect();
         scriptProcessor.disconnect();
         gain.disconnect();
-        set_result(hybrid_oscillator_node.slice(0, 30), 'hybrid-oscillator-node');
         audiofp = JSON.stringify(hybrid_oscillator_node);
-        var clientRectsFP = getClientRectsFP();
-        var audio_hash = CryptoJS.SHA1(audiofp).toString();
-        console.log(audio_hash, 'audio-hash');
-        set_result(audio_hash, 'audio-fingerprint');
-        full_buffer_hash = CryptoJS.SHA1(audiofp + clientRectsFP).toString();
-        console.log(full_buffer_hash, 'hybrid-hash');
-        set_result(full_buffer_hash,'hybrid-fingerprint');
+        callback(audiofp)
     };
     oscillator.start(0);
 }
@@ -133,17 +125,30 @@ function getFingerPrintReport() {
     });
 }
 
-function addToFirebase() {
+function computeHash() {
+    getHybridAudioFingerprint(function(audioFP) {
+        var audio_hash = CryptoJS.SHA1(audioFP).toString();
+        console.log(audio_hash, 'audio-hash');
+        var clientRectsFP = getClientRectsFP();
+        hybrid_hash = CryptoJS.SHA1(clientRectsFP + audioFP).toString();
+        console.log(hybrid_hash, 'hybrid-hash');
+        set_result(hybrid_oscillator_node.slice(0, 30), 'hybrid-oscillator-node');
+        set_result(hybrid_hash,'hybrid-fingerprint');
+        set_result(audio_hash, 'audio-fingerprint');
+        addToFirebase(hybrid_hash)
+    });
+}
+
+function addToFirebase(hybrid_hash) {
     if (!firebase.apps.length) {
         var app = firebase.initializeApp(firebaseConfig);
         db = firebase.firestore(app);
     }
-
     getFingerPrintReport().then(fp => {
         delete fp.components.plugins; // cant add the nested array to FB
         var docData = {
             "context-properties": context_properties,
-            "full-buffer-hash": full_buffer_hash,
+            "full-buffer-hash": hybrid_hash,
             "hybrid-oscillator-node": hybrid_oscillator_node,
             "components" : fp.components,
             "userAgent": fp.components.userAgent ?  fp.components.userAgent : null,
@@ -153,10 +158,9 @@ function addToFirebase() {
         $.getJSON('https://ipapi.co/json/', function(ipData) {
             var ipString = JSON.stringify(ipData, null, 2);
             docData["IPInfo"] = JSON.parse(ipString);
-            console.log(full_buffer_hash)
-            // db.collection("hybrid-fingerprints").doc(full_buffer_hash).set(docData).then(function() {
-            //     console.log("Document successfully written!");
-            // });
+            db.collection("hybrid-fingerprints").doc(hybrid_hash).set(docData).then(function() {
+                console.log("Document successfully written!");
+            });
         });
     });
 }
@@ -176,14 +180,6 @@ function createDivs() {
 
 function getFingerPrints() {
     createDivs()
-    setTimeout(function() {
-        getAudioContextProperties();
-    }, 1000);
-    setTimeout(async function() {
-
-        getHybridFingerprint();
-    }, 1000);
-    setTimeout(function() {
-        addToFirebase();
-    }, 1000);
+    getAudioContextProperties();
+    computeHash();
 }
