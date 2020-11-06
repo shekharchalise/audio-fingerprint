@@ -51,7 +51,7 @@ var getClientRectsFP = function() {
     // Details: http://jcarlosnorte.com/security/2016/03/06/advanced-tor-browser-fingerprinting.html
     var elem = document.createElement('div');
     var s = elem.style;
-    s.position = 'absolute';
+    s.position = 'fixed';
     s.left = '3.1px';
     s.top = '2.1px';
     s.zIndex = '-100';
@@ -75,6 +75,8 @@ var getClientRectsFP = function() {
 };
 
 async function getHybridFingerprint() {
+    console.log("test")
+    hybrid_oscillator_node = [];
     var audioCtx = new(window.AudioContext || window.webkitAudioContext),
         oscillator = audioCtx.createOscillator(),
         analyser = audioCtx.createAnalyser(),
@@ -83,15 +85,16 @@ async function getHybridFingerprint() {
 
     // Create and configure compressor
     compressor = audioCtx.createDynamicsCompressor();
-    compressor.threshold && (compressor.threshold.value = -50);
-    compressor.knee && (compressor.knee.value = 40);
-    compressor.ratio && (compressor.ratio.value = 20);
-    compressor.reduction && (compressor.reduction.value = -20);
-    compressor.attack && (compressor.attack.value = 0);
-    compressor.release && (compressor.release.value = .25);
+
+    compressor.threshold.setValueAtTime(-50, audioCtx.currentTime);
+    compressor.knee.setValueAtTime(40, audioCtx.currentTime);
+    compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+    compressor.attack.setValueAtTime(0, audioCtx.currentTime);
+    compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
 
     gain.gain.value = 0; // Disable volume
-    oscillator.type = "triangle"; // Set oscillator to output triangle wave
+    oscillator.type = "sine"; // Set oscillator to output triangle wave
+    oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
     oscillator.connect(compressor); // Connect oscillator output to dynamic compressor
     compressor.connect(analyser); // Connect compressor to analyser
     analyser.connect(scriptProcessor); // Connect analyser output to scriptProcessor input
@@ -150,9 +153,10 @@ function addToFirebase() {
         $.getJSON('https://ipapi.co/json/', function(ipData) {
             var ipString = JSON.stringify(ipData, null, 2);
             docData["IPInfo"] = JSON.parse(ipString);
-            db.collection("hybrid-fingerprints").doc(full_buffer_hash).set(docData).then(function() {
-                console.log("Document successfully written!");
-            });
+            console.log(full_buffer_hash)
+            // db.collection("hybrid-fingerprints").doc(full_buffer_hash).set(docData).then(function() {
+            //     console.log("Document successfully written!");
+            // });
         });
     });
 }
@@ -176,10 +180,10 @@ function getFingerPrints() {
         getAudioContextProperties();
     }, 1000);
     setTimeout(async function() {
-        hybrid_oscillator_node = [];
+
         getHybridFingerprint();
-    }, 3000);
+    }, 1000);
     setTimeout(function() {
         addToFirebase();
-    }, 4000);
+    }, 1000);
 }
