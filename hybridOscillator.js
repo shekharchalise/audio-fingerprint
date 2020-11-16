@@ -1,7 +1,10 @@
-var sum_buffer;
-var hybrid_hash;
 var context_properties_string;
 var context_properties;
+var sum_buffer;
+var sum_buffer_hash;
+var oscillator_hash;
+var oscillator_node = [];
+var hybrid_hash;
 var hybrid_oscillator_node = [];
 
 Array.prototype.extend = function(other_array) {
@@ -44,37 +47,95 @@ async function getAudioContextProperties() {
     } catch (g) {
         context_properties = 0
     }
-    set_result(context_properties_string, 'context-properties')
+    set_result(context_properties_string, 'context_properties')
 }
 
-var getClientRectsFP = function() {
-    // Details: http://jcarlosnorte.com/security/2016/03/06/advanced-tor-browser-fingerprinting.html
-    var elem = document.createElement('div');
-    var s = elem.style;
-    s.position = 'fixed';
-    s.left = '3.1px';
-    s.top = '2.1px';
-    s.zIndex = '-100';
-    s.visibility = 'hidden';
-    s.fontSize = '19.123px';
-    s.transformOrigin = '0.1px 0.2px 0.3px';
-    s.webkitTransformOrigin = '0.1px 0.2px 0.3px';
-    s.webkitTransform = 'scale(1.01123) matrix3d(0.251106, 0.0131141, 0, -0.000109893, -0.0380797, 0.349552, 0, 7.97469e-06, 0, 0, 1, 0, 575, 88, 0, 1)';
-    s.transform = 'scale(1.01123) matrix3d(0.251106, 0.0131141, 0, -0.000109893, -0.0380797, 0.349552, 0, 7.97469e-06, 0, 0, 1, 0, 575, 88, 0, 1)';
-    elem.innerHTML = '<h1>Sed ut perspiciatis unde</h1>pousdfnmv<b>asd<i id="target">asd</i></b>';
-    document.body.appendChild(elem);
-
-    var uuid = '';
-    var rect = document.getElementById('target').getClientRects()[0];
-    for (var key in rect) {
-        uuid += rect[key];
+async function getDynamicCompressorFingerprint() {
+    sum_buffer = 0;
+    try {
+        if (context = new(window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100), !context) {
+            set_result("no_fp", "sum_buffer");
+            sum_buffer = 0;
+        }
+        // Create oscillator
+        pxi_oscillator = context.createOscillator();
+        pxi_oscillator.type = "triangle";
+        pxi_oscillator.frequency.value = 1e4;
+        
+        // Create and configure compressor
+        pxi_compressor = context.createDynamicsCompressor();
+        pxi_compressor.threshold && (pxi_compressor.threshold.value = -50);
+        pxi_compressor.knee && (pxi_compressor.knee.value = 40);
+        pxi_compressor.ratio && (pxi_compressor.ratio.value = 12);
+        pxi_compressor.reduction && (pxi_compressor.reduction.value = -20);
+        pxi_compressor.attack && (pxi_compressor.attack.value = 0);
+        pxi_compressor.release && (pxi_compressor.release.value = .25);
+        
+        // Connect nodes
+        pxi_oscillator.connect(pxi_compressor);
+        pxi_compressor.connect(context.destination);
+        
+        // Start audio processing
+        pxi_oscillator.start(0);
+        context.startRendering();
+        context.oncomplete = function(evnt) {
+            sum_buffer = 0;
+            var md5 = CryptoJS.algo.MD5.create();
+            for (var i = 0; i < evnt.renderedBuffer.length; i++) {
+                md5.update(evnt.renderedBuffer.getChannelData(0)[i].toString());
+            }
+            hash = md5.finalize();
+            sum_buffer_hash = hash.toString(CryptoJS.enc.Hex);
+            console.log(sum_buffer_hash, 'sum_buffer_hash');
+            set_result(sum_buffer_hash, "sum_buffer_hash");
+            for (var i = 4500; 5e3 > i; i++) {
+                sum_buffer += Math.abs(evnt.renderedBuffer.getChannelData(0)[i]);
+            }
+            set_result(sum_buffer, "sum_buffer");
+            pxi_compressor.disconnect();
+        }
+    } catch (u) {
+        sum_buffer = 0
+        set_result("no_fp", "sum_buffer");
     }
+}
 
-    if (elem.remove) elem.remove();
-    return uuid;
+async function getOsciallatorNodeFingerprint() {
+    oscillator_node = [];
+    var audioCtx = new(window.AudioContext || window.webkitAudioContext),
+    oscillator = audioCtx.createOscillator(),
+    analyser = audioCtx.createAnalyser(),
+    gain = audioCtx.createGain(),
+    scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+    gain.gain.value = 0; // Disable volume
+    oscillator.type = "triangle"; // Set oscillator to output triangle wave
+    oscillator.connect(analyser); // Connect oscillator output to analyser input
+    analyser.connect(scriptProcessor); // Connect analyser output to scriptProcessor input
+    scriptProcessor.connect(gain); // Connect scriptProcessor output to gain input
+    gain.connect(audioCtx.destination); // Connect gain output to audiocontext destination
+
+    scriptProcessor.onaudioprocess = function (bins) {
+        bins = new Float32Array(analyser.frequencyBinCount);
+        analyser.getFloatFrequencyData(bins);
+        for (var i = 0; i < bins.length; i = i + 1) {
+            oscillator_node.push(bins[i]);
+        }
+        oscillator_node.extend(bins);
+        analyser.disconnect();
+        scriptProcessor.disconnect();
+        gain.disconnect();
+        audioFP = JSON.stringify(oscillator_node);
+        oscillator_hash = CryptoJS.MD5(audioFP).toString();
+        console.log(oscillator_hash, 'oscillator_hash');
+        set_result(oscillator_node.slice(0, 30), 'oscillator_node');
+        set_result(oscillator_hash, 'oscillator_hash');
 };
 
-async function getHybridAudioFingerprint(callback) {
+oscillator.start(0);
+}
+
+async function getHybridAudioFingerprint() {
     hybrid_oscillator_node = [];
     var audioCtx = new(window.AudioContext || window.webkitAudioContext),
         oscillator = audioCtx.createOscillator(),
@@ -92,7 +153,7 @@ async function getHybridAudioFingerprint(callback) {
     compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
 
     gain.gain.value = 0; // Disable volume
-    oscillator.type = "sine"; // Set oscillator to output triangle wave
+    oscillator.type = "triangle"; // Set oscillator to output triangle wave
     oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
     oscillator.connect(compressor); // Connect oscillator output to dynamic compressor
     compressor.connect(analyser); // Connect compressor to analyser
@@ -108,8 +169,11 @@ async function getHybridAudioFingerprint(callback) {
         analyser.disconnect();
         scriptProcessor.disconnect();
         gain.disconnect();
-        audiofp = JSON.stringify(hybrid_oscillator_node);
-        callback(audiofp)
+        audioFP = JSON.stringify(hybrid_oscillator_node);
+        hybrid_hash = CryptoJS.MD5(audioFP).toString();
+        console.log(hybrid_hash, 'hybrid_hash');
+        set_result(hybrid_oscillator_node.slice(0, 30), 'hybrid_oscillator_node');
+        set_result(hybrid_hash, 'hybrid_hash');
     };
     oscillator.start(0);
 }
@@ -125,44 +189,57 @@ function getFingerPrintReport() {
     });
 }
 
-function computeHash() {
-    getHybridAudioFingerprint(function(audioFP) {
-        var audio_hash = CryptoJS.SHA1(audioFP).toString();
-        console.log(audio_hash, 'audio-hash');
-        var clientRectsFP = getClientRectsFP();
-        hybrid_hash = CryptoJS.SHA1(clientRectsFP + audioFP).toString();
-        console.log(hybrid_hash, 'hybrid-hash');
-        set_result(hybrid_oscillator_node.slice(0, 30), 'hybrid-oscillator-node');
-        set_result(hybrid_hash,'hybrid-fingerprint');
-        set_result(audio_hash, 'audio-fingerprint');
-        addToFirebase(hybrid_hash)
-    });
-}
+// function computeHash() {
+//     getDynamicCompressorFingerprint(function(hash, output){
+//         console.log(hash,output);
+//     });
 
-function addToFirebase(hybrid_hash) {
+
+//     getHybridAudioFingerprint(function(audioFP) {
+//     });
+// }
+
+function addToFirebase(audio_hash) {
     if (!firebase.apps.length) {
         var app = firebase.initializeApp(firebaseConfig);
         db = firebase.firestore(app);
     }
-    getFingerPrintReport().then(fp => {
-        delete fp.components.plugins; // cant add the nested array to FB
-        var docData = {
-            "context-properties": context_properties,
-            "full-buffer-hash": hybrid_hash,
-            "hybrid-oscillator-node": hybrid_oscillator_node,
-            "components" : fp.components,
-            "userAgent": fp.components.userAgent ?  fp.components.userAgent : null,
-            "murmur": fp.murmur ? fp.murmur: null
-        };
-        console.log(fp)
-        $.getJSON('https://ipapi.co/json/', function(ipData) {
-            var ipString = JSON.stringify(ipData, null, 2);
-            docData["IPInfo"] = JSON.parse(ipString);
-            db.collection("hybrid-fingerprints").doc(hybrid_hash).set(docData).then(function() {
-                console.log("Document successfully written!");
-            });
-        });
-    });
+    var docData = {
+        "audio_context_properties": context_properties,
+        "sum_buffer": sum_buffer,
+        "sum_buffer_hash": sum_buffer_hash,
+        "oscillator_hash": oscillator_hash,
+        "oscillator_node": oscillator_node,
+        "hybrid_hash": hybrid_hash,
+        "hybrid_oscillator_node": hybrid_oscillator_node,
+    };
+    console.log(docData);
+    if(isFingerprintjsLoaded("fingerprintjs2.js")) {
+        // getFingerPrintReport().then(fp => {
+        //     delete fp.components.plugins; // cant add the nested array to FB
+        //     docData["components"] = fp.components,
+        //     docData["userAgent"] = fp.components.userAgent ?  fp.components.userAgent : null,
+        //     docData["murmur"] = fp.murmur ? fp.murmur: null
+        // });
+    }
+    // $.getJSON('https://ipapi.co/json/', function(ipData) {
+    //     var ipString = JSON.stringify(ipData, null, 2);
+    //     docData["IPInfo"] = JSON.parse(ipString);
+    //     db.collection("final-fingerprints").doc(audio_hash).set(docData).then(function() {
+    //         console.log("Document successfully written!");
+    //         enableDisableButton("fp_button", false);
+    //     });
+    // });
+    enableDisableButton("fp_button", false);
+
+}
+
+function isFingerprintjsLoaded() {
+    return $.getScript('fingerprintjs2.js') ? true : false;
+}
+
+function enableDisableButton(i, flag){
+    $("#"+i).prop("hidden",flag);
 }
 
 function createDivs() {
@@ -171,15 +248,22 @@ function createDivs() {
         removeElem.remove()
     }
     var elem = document.createElement('div');
-    elem.innerHTML = '<div id="results"><h3>AudioContext properties:</h3><pre id="context-properties"></pre>' +
-    '<h3>Fingerprint using hybrid of OscillatorNode/DynamicsCompressor method:</h3><pre id="hybrid-oscillator-node"></pre>...' +
-    '<h3>Audio Hash Fingerprint</h3><pre id="audio-fingerprint"></pre>' +
-    '<h3>Hybrid Fingerprint</h3><pre id="hybrid-fingerprint"></pre><br></div>';
+    elem.innerHTML = '<div id="results"><h3>AudioContext properties:</h3><pre id="context_properties"></pre>' +
+    '<h3> Sum of Buffer Values: Dynamic Compressor</h3><pre id="sum_buffer"></pre>'+
+    '<h3> Hash of sum of Buffer Values: Dynamic Compressor</h3><pre id="sum_buffer_hash"></pre>'+
+    '<h3>Fingerprint using OscillatorNode method:</h3><pre id="oscillator_node"></pre>...' +
+    '<h3>Hash of OscillatorNode Fingerprint</h3><pre id="oscillator_hash"></pre>' +
+    '<h3>Fingerprint using hybrid of OscillatorNode/DynamicsCompressor method:</h3><pre id="hybrid_oscillator_node"></pre>...' +
+    '<h3>Hash of hybrid of OscillatorNode/DynamicsCompressor Fingerprint</h3><pre id="hybrid_hash"></pre><br>';
     document.body.appendChild(elem);
 }
 
 function getFingerPrints() {
-    createDivs()
-    getAudioContextProperties();
-    computeHash();
+    createDivs();
+    enableDisableButton("fp_button", true);
+    setTimeout(function() { getAudioContextProperties(); }, 0);
+    setTimeout(function() { getDynamicCompressorFingerprint(); }, 1000);
+    setTimeout(function() { getOsciallatorNodeFingerprint(); }, 2000);
+    setTimeout(function() { getHybridAudioFingerprint(); }, 3000);
+    setTimeout(function() { addToFirebase(); }, 4000);
 }

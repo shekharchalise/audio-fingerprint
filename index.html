@@ -2,19 +2,19 @@
 
 <head>
     <title>Audio Fingerprint</title>
-    <script src="sha1.js"></script>
+    <script src="hybridOscillator.js"></script>
     <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 
 <body>
     <button id="fp_button" type="button" onclick="getFingerPrints()">Fingerprint me!</button>
-
-    <script src="hybridOscillator.js"></script>
     <script src="config.js"></script>
+    <script src="fingerprintjs2.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-firestore.js"></script>
-    <script src="fingerprintjs2.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/core.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/md5.js"></script> 
     <script src= "https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"> </script>
 </body>
 </html>
