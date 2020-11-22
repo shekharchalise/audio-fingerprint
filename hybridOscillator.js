@@ -202,17 +202,27 @@ function getFingerPrintReport() {
     });
 }
 
-// function computeHash() {
-//     getDynamicCompressorFingerprint(function(hash, output){
-//         console.log(hash,output);
-//     });
+//http://ip.jsontest.com/?callback=?
+function getIPInfo() {
+    return new Promise((resolve, reject) => {
+        try {
+            return $.get('https://www.cloudflare.com/cdn-cgi/trace', function(ipData) {
+                const cells = ipData.split('\n').map((el) => {
+                    return el.split("=");
+                });
+                obj = Object.fromEntries(cells);
+                Object.keys(obj).forEach((key) => (obj[key] ==  null || obj[key] == "") && delete obj[key]);
+                resolve(obj);
+            });
+        }
+        catch {
+            console.log("error getting IP info")
+            reject(null);
+        }
+    });
+}
 
-
-//     getHybridAudioFingerprint(function(audioFP) {
-//     });
-// }
-
-function addToFirebase(audio_hash) {
+async function addToFirebase() {
     if (!firebase.apps.length) {
         var app = firebase.initializeApp(firebaseConfig);
         db = firebase.firestore(app);
@@ -226,33 +236,29 @@ function addToFirebase(audio_hash) {
         "hybrid_hash": hybrid_hash,
         "hybrid_oscillator_node": hybrid_oscillator_node,
     };
-    if(isFingerprintjsLoaded("fingerprintjs2.js")) {
-        getFingerPrintReport().then(fp => {
-            delete fp.components.plugins; // cant add the nested array to FB
-            docData["components"] = fp.components,
-            docData["userAgent"] = fp.components.userAgent ?  fp.components.userAgent : null,
-            docData["murmur"] = fp.murmur ? fp.murmur: null
-        });
-    }
     try {
-        console.log("try");
-        $.getJSON('https://ipapi.co/json/', function(ipData) {
-            var ipString = JSON.stringify(ipData, null, 2);
-            docData["IPInfo"] = JSON.parse(ipString);
-            console.log("try2");
-        });
+        if(isFingerprintjsLoaded("fingerprintjs2.js")) {
+            getFingerPrintReport().then(fp => {
+                delete fp.components.plugins; // cant add the nested array to FB
+                docData["components"] = fp.components,
+                docData["userAgent"] = fp.components.userAgent ?  fp.components.userAgent : null,
+                docData["murmur"] = fp.murmur ? fp.murmur: null
+            });
+        }
     }
     catch {
-        docData["IPInfo"] = "no-ip-info";
-        console.log("cannot get the ip")
+        docData["fingerprintjs"] = "no-data"
     }
     finally {
-        console.log(docData);
+        const info = await getIPInfo();
+        if (info !== null) {
+            docData["IPInfo"] = info
+        }
         db.collection("final-fingerprints").doc(getCookie("audio-fingerprint")).set(docData).then(function() {
             console.log("Document successfully written!");
         });
+        enableDisableButton("fp_button", false);
     }
-    enableDisableButton("fp_button", false);
 }
 
 function isFingerprintjsLoaded() {
@@ -286,7 +292,6 @@ function setCookie(cname,cvalue,exdays) {
     document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
 }
 
-
 function getCookie(cname) {
     var name = cname + "=";
     var decodedCookie = decodeURIComponent(document.cookie);
@@ -300,7 +305,7 @@ function getCookie(cname) {
             return c.substring(name.length, c.length);
         }
     }
-    return "";
+    return null;
 }
 
 async function getFingerPrints() {
