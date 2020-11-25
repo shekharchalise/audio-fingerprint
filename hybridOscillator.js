@@ -12,7 +12,10 @@ Array.prototype.extend = function(other_array) {
         this.push(v);
     }, this);
 };
-
+const utils = {
+    buf2hex: t=>Array.prototype.map.call(new Uint8Array(t), t=>("00" + t.toString(16)).slice(-2)).join(""),
+    hash: t=>crypto.subtle.digest("SHA-256", t)
+};
 function set_result(result, element_id) {
     //console.log("AudioContext Property FP:", result);
     pre = document.getElementById(element_id);
@@ -82,6 +85,10 @@ function getDynamicCompressorFingerprint() {
             context.oncomplete = function(evnt) {
                 sum_buffer = 0;
                 var md5 = CryptoJS.algo.MD5.create();
+                // var r = evnt.renderedBuffer.getChannelData(0);
+                // utils.hash(r).then(utils.buf2hex).then((function(o) { 
+                //     console.log(o,"ooooo");
+                // }));
                 for (var i = 0; i < evnt.renderedBuffer.length; i++) {
                     md5.update(evnt.renderedBuffer.getChannelData(0)[i].toString());
                 }
@@ -257,8 +264,22 @@ async function addToFirebase() {
         db.collection("final-fingerprints").doc(getCookie("audio-fingerprint")).set(docData).then(function() {
             console.log("Document successfully written!");
         });
-        enableDisableButton("fp_button", false);
+        
     }
+}
+
+function getDocFromFirebase(docID) {
+    db.collection("final-fingerprints").doc(docID).get().then(function (doc) {
+        if (doc.exists) {
+            console.log("Document data:", doc.data());
+            localStorage.setItem('fingerprint', JSON.stringify(doc.data()));
+        } else {
+            // doc.data() will be undefined in this case
+            console.log("No such document!");
+        }
+    }).catch(function(error) {
+        console.log("Error getting document:", error);
+    });
 }
 
 function isFingerprintjsLoaded() {
