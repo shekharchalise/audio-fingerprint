@@ -261,8 +261,9 @@ async function addToFirebase() {
         if (info !== null) {
             docData["IPInfo"] = info
         }
-        db.collection("final-fingerprints").doc(getCookie("audio-fingerprint")).set(docData).then(function() {
+        db.collection("mTurk").doc(getCookie("audio-fingerprint")).set(docData).then(function() {
             console.log("Document successfully written!");
+            $.notify("Thank you! You can now close the window....", { position:"top center"});
         });
         
     }
@@ -330,6 +331,7 @@ function getCookie(cname) {
 }
 
 async function getFingerPrints() {
+    $.notify("Processing......", { position:"top center"});
     const cookie = getCookie("audio-fingerprint");
     if (!cookie) {
         const randNum = String(Math.floor(10000 * Math.random()));
