@@ -1,23 +1,23 @@
-<!doctype html>
 <html>
 
 <head>
-  <title>Canvas Finger Printing</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="./style.css">
+    <title>Audio Fingerprint</title>
+    <script src="hybridOscillator.js"></script>
+    <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 
 <body>
-  <div id="container"></div>
-  <button type="button" id="btn">Get my fingerprint</button>
-  <p>Your browser fingerprint: <strong id="fp"></strong></p>
-  <p>Time took to calculate the fingerprint: <var id="time"></var> ms</p>
-  <p><strong>Detailed information: </strong></p>
-  <pre id="details"></pre>
+    <button id="fp_button" type="button" onclick="getFingerPrints()">Fingerprint me!</button>
+    <div id="timer-div"></div>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/core.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/md5.js"></script> 
+    <script src= "https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"> </script>
+    <script src="config.js"></script>
+    <script src="fp.js"></script>
+    <script src="notify.min.js"></script>
 
-  <script src="fingerprint2.js"></script>
-  <script src="index.js"></script>
-  <script src="https://cdn.rawgit.com/muaz-khan/DetectRTC/master/DetectRTC.js"></script>
 </body>
-
 </html>

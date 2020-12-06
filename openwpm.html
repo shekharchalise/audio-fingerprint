@@ -1,0 +1,503 @@
+<html>
+<head>
+<title>AudioContext Fingerprint Test Page</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
+<script src="sha1.js"></script>
+<script src="jquery.canvasjs.min.js"></script>
+<script src="notify.min.js"></script>
+<link rel="stylesheet" href="fingerprint.css" type="text/css">
+</head>
+<body>
+<h1> AudioContext Fingerprint Test Page </h1>
+<p>This page tests browser-fingerprinting using the AudioContext and Canvas API.
+Using the AudioContext API to fingerprint does not collect sound played or recorded
+by your machine - an AudioContext fingerprint is a property of your machine's audio stack
+itself.  As of March 31st, 2018 this test page no longer saves fingerprints for
+research purposes. When you view your fingerprint, no data is transferred to us.
+We also test a form of fingerprinting using Flash if you have Flash enabled.<br><br>
+This page is a part of <a href="https://webtap.princeton.edu">Princeton CITP's Web Transparency and Accountability Project</a>.
+For questions or concerns email arvindn@cs.princeton.edu and ste@cs.princeton.edu.<br></p>
+<p>JS/CSS and Flash font detection methods provided by <a href="https://github.com/Valve/fingerprintjs2">fingerprintjs2 library</a>.</p>
+<button id="fp_button" type="button" onclick="run_fingerprints()">Fingerprint me!</button>
+<h2>Visualization:</h2>
+<div id="chartContainer" style="height: 300px; width: 100%;"></div>
+<div id="results">
+<h2>AudioContext Fingerprints</h2>
+<h3>AudioContext properties:</h3>
+    <pre id="nt_vc_result"></pre>
+<h3>Fingerprint using DynamicsCompressor (sum of buffer values):</h3>
+    <pre id="pxi_result"></pre>
+<h3>Fingerprint using DynamicsCompressor (hash of full buffer):</h3>
+    <pre id="pxi_full_buffer_result"></pre>
+<h3>Fingerprint using OscillatorNode:</h3>
+    <pre id="cc_result"></pre>...
+<h3>Fingerprint using hybrid of OscillatorNode/DynamicsCompressor method:</h3>
+    <pre id="hybrid_result"></pre>...
+<br>
+<h2>Canvas, Javascript, and Flash Font Detection</h2>
+<h3>Canvas font detection:</h3>
+<pre id="canvas_font_result"></pre><br><pre id="canvas_font_time"></pre>
+<h3>JS/CSS font detection:</h3>
+<pre id="js_font_result"></pre><br><pre id="js_font_time"></pre>
+<h3>Flash font detection:</h3>
+<pre id="flash_font_result"></pre><br><pre id="flash_font_time"></pre>
+</div>
+
+<script>
+
+
+Array.prototype.extend = function(other_array) {
+    other_array.forEach(function(v) {
+        this.push(v);
+    }, this);    
+};
+
+function set_result(result, element_id) {
+console.log("AudioContext Property FP:",result);
+pre = document.getElementById(element_id);
+pre.innerHTML = result;
+}
+
+function get_result(element_id) {
+pre = document.getElementById(element_id);
+return pre.innerHTML; 
+}
+
+function draw_fp(buffer) {
+	var data = [];
+	var dataSeries_user = { 
+        type: "line",
+        legendText: "User fingerprint",
+        showInLegend: true
+    };
+	var dataSeries_android_chrome_line = { 
+        type: "line",
+        legendText: "Chrome on Android sample fingerprint",
+        showInLegend: true
+    };
+    console.log(buffer);
+	var dataPoints = [];
+	for (var i = 0; i < buffer.length; i += 1) {
+		dataPoints.push({
+			x: i,
+			y: buffer[i]
+		});
+	}
+    var android_chrome_sample_buffer =
+        [-122.32972717285156,-122.14209747314453,-121.59477233886719,-120.7051010131836,-119.5259780883789,-118.08773803710938,-116.4102783203125,-114.51014709472656,-112.38298034667969,-110.01155853271484,-107.376220703125,
+        -104.43611907958984,-101.15048217773438,-97.49276733398438,-93.58026123046875,-90.70868682861328,-82.7669677734375,-44.76966857910156,-32.01609802246094,-29.581905364990234,-36.260292053222656,-56.06635665893555,-95.5028076171875,-91.64085388183594,-95.39254760742188,-99.24762725830078,-102.76707458496094,-105.935546875,-108.79594421386719,-111.396240234375,-113.77948760986328,-115.97830200195312,-118.02398681640625,-119.93797302246094,-121.73934936523438,-123.461181640625,-125.0958251953125,-126.6886215209961,-128.22691345214844,-129.7215576171875,-131.18075561523438,-132.517578125,-133.59326171875,-134.05111694335938,-133.5047607421875,-131.91835021972656,-129.57130432128906,-126.7589111328125,-123.68778228759766,-120.34153747558594,-116.70545959472656,-112.77143859863281,-108.8901596069336,-110.13886260986328,-78.23479461669922,-56.506099700927734,-48.89027404785156,-50.488914489746094,-62.08056640625,-95.01534271240234,-107.56063842773438,-110.03480529785156,-113.92808532714844,-117.5960464477539,-120.89019775390625,-123.83695983886719,-126.486083984375,-128.87759399414062,-131.04664611816406,-133.00546264648438,-134.85740661621094,-136.50132751464844,-138.03915405273438,-139.44903564453125,-140.7362060546875,-141.91134643554688,-142.97650146484375,-143.86338806152344,-144.60853576660156,-145.08407592773438,-145.3588409423828,-145.10533142089844,-144.46987915039062,-143.2994384765625,-141.39447021484375,-139.2664337158203,-136.54835510253906,-133.42214965820312,-129.8544921875,-125.98248291015625,-122.84315490722656,-120.32222747802734,-74.66239166259766,-60.67243957519531,-57.39389419555664,-63.16221618652344,-81.25320434570312,-132.92071533203125,-123.44856262207031,-127.1201171875,-131.00576782226562,-134.59002685546875,-137.80911254882812,-140.7308807373047,-143.4422607421875,-145.92103576660156,-148.26351928710938,-150.6034698486328,-152.65536499023438,-155.19430541992188,-157.23475646972656,-159.21595764160156,-160.9696044921875,-161.01596069335938,-159.5649871826172,-157.52452087402344,-155.0093231201172,-152.5991973876953,-150.3179168701172,-147.80081176757812,-145.36732482910156,-142.87496948242188,-140.0660858154297,-137.17990112304688,-133.97547912597656,-130.47056579589844,-126.62661743164062,-122.72882080078125,-122.4233627319336,-96.4261245727539,-72.49575805664062,-63.910491943359375,-64.67898559570312,-75.17179107666016,-104.310791015625,-121.34043884277344,-123.28124237060547,-127.17937469482422,-130.89013671875,-134.23434448242188,-137.243408203125,-139.91355895996094,-142.37982177734375,-144.59408569335938,-146.58612060546875,-148.5425262451172,-150.19317626953125,-151.8018341064453,-153.12820434570312,-154.57225036621094,-155.89321899414062,-156.96240234375,-158.0265655517578,-158.94876098632812,-159.65101623535156,-160.24771118164062,
+        -160.46127319335938,-160.37628173828125,-160.52992248535156,-158.8769073486328,-158.02066040039062,-155.8513641357422,-153.20965576171875,-150.03594970703125,-146.40512084960938,-143.2304229736328,-149.06285095214844,-86.98535919189453,-71.66908264160156,-67.53427124023438,-72.4151382446289,-88.95519256591797,-163.05955505371094,-143.82936096191406,-147.54928588867188,-151.6073455810547,-155.36679077148438,-159.0833740234375,-162.54896545410156,-165.85867309570312,-169.8763427734375,-172.23690795898438,-177.76846313476562,-176.2406005859375,-174.30380249023438,-171.90524291992188,-170.34033203125,-167.87643432617188,-166.25074768066406,-164.17007446289062,-162.63015747070312,-160.54666137695312,-158.61619567871094,-156.9739532470703,-154.55789184570312,-152.2281036376953,-150.46791076660156,-147.3612518310547,-144.82290649414062,-141.63804626464844,-138.27825927734375,-134.45489501953125,-130.55599975585938,-129.23997497558594,-108.2432632446289,-81.73504638671875,-72.14198303222656,-72.08299255371094,-81.52955627441406,-107.64354705810547,-129.30300903320312,-130.4817657470703,-134.38380432128906,-138.15713500976562,-141.56430053710938,-144.6269073486328,-147.37588500976562,-149.95321655273438,-152.21929931640625,-154.3282012939453,-156.37399291992188,-158.0703125,-159.91015625,-161.7094268798828,-163.09378051757812,-164.83627319335938,-165.77169799804688,-167.88916015625,-168.91065979003906,-170.63018798828125,-172.09088134765625,-173.70054626464844,-171.8708038330078,-171.59864807128906,-169.1346435546875,-165.64186096191406,-162.9986572265625,-159.50790405273438,-155.5455322265625,-151.44068908691406,-147.7095184326172,-176.31117248535156,-95.68680572509766,-78.93416595458984,-73.9278793334961,-77.93965148925781,-93.06048583984375,-151.34783935546875,-147.24249267578125,-150.48912048339844,-154.0525665283203,-157.9960174560547,-160.4875030517578,-163.28829956054688,-165.69863891601562,-166.92689514160156,-169.13604736328125,-169.37167358398438,-170.76596069335938,-171.008544921875,-170.7423095703125,-171.14129638671875,-169.5647430419922,-169.2993927001953,-168.0100860595703,-166.747802734375,-165.54232788085938,-163.57154846191406,-162.85116577148438,-159.2034149169922,-158.15908813476562,-156.49896240234375,-152.99681091308594,-150.85755920410156,-147.588623046875,-144.38330078125,-140.63381958007812,-136.69468688964844,-134.6832275390625,-118.25794219970703,-88.63579559326172,-77.98944854736328,-77.10281372070312,-85.54737854003906,-109.14517211914062,-135.88372802734375,-135.9951171875,
+        -139.8673858642578,-143.69009399414062,-147.13790893554688,-150.30503845214844,-153.04660034179688,-155.77398681640625,-158.02740478515625,-160.20123291015625,-162.5337371826172,-164.15017700195312,-166.09640502929688,-168.20298767089844,-169.48890686035156,-171.55992126464844,-173.67958068847656,-172.19659423828125,-175.60122680664062,-175.04586791992188,-173.63462829589844,-170.25086975097656,-172.69912719726562,-164.95684814453125,-165.75970458984375,-160.86822509765625,-158.69200134277344,-155.17672729492188,-151.740966796875,-147.726806640625,-143.95498657226562,-152.51683044433594,-102.89117431640625,-84.5665054321289,-78.66974639892578,-81.82719421386719,-95.63552856445312,-139.97962951660156,-143.34217834472656,-146.36856079101562,-150.42059326171875,-153.65658569335938,-157.18814086914062,-160.1134490966797,-162.37277221679688,-165.06634521484375,-166.7538604736328,-168.1718292236328,-169.6138916015625,-171.18438720703125,-171.87646484375,-173.11334228515625,-172.47906494140625,-173.23654174804688,-170.74655151367188,-171.5606689453125,-169.68215942382812,-168.2510528564453,-167.42828369140625,-165.82363891601562,-162.61074829101562,-162.62551879882812,-157.92359924316406,-156.47203063964844,-153.29139709472656,-150.05209350585938,-146.2973175048828,-142.4108123779297,-139.90869140625,-127.95027923583984,-94.39054870605469,-82.63695526123047,-80.91960144042969,-88.39969635009766,-109.84131622314453,-142.65528869628906,-141.04727172851562,-144.91432189941406,-148.73388671875,-152.24708557128906,-155.3547821044922,-158.27369689941406,-160.90858459472656,-163.4286346435547,-165.45391845703125,-168.12867736816406,-169.79835510253906,-171.6738739013672,-174.10354614257812,-175.23977661132812,-176.72088623046875,-178.4365997314453,-177.3018035888672,-177.35546875,-175.611328125,-173.21701049804688,-170.99424743652344,-169.7777099609375,-165.10101318359375,-165.41183471679688,-160.75250244140625,-158.65516662597656,-155.21495056152344,-151.83331298828125,-147.94503784179688,-144.154296875,-147.64651489257812,-109.3759765625,-89.3089599609375,-82.49858856201172,-84.81307983398438,-97.39665222167969,-134.57394409179688,-143.24639892578125,-145.97683715820312,-149.9970703125,-153.4745635986328,-156.92471313476562,-159.91619873046875,-162.36773681640625,-164.96847534179688,-167.28140258789062,-168.7958526611328,-170.7417449951172,-172.271240234375,-173.11886596679688,-174.660888671875,-175.26162719726562,-175.9494171142578,-176.39804077148438,-175.36398315429688,-175.15496826171875,-173.62423706054688,-173.51211547851562,-171.14093017578125,-167.89736938476562,-169.8413848876953,-162.94473266601562,-162.755126953125,-159.2215118408203,-156.03529357910156,-152.43211364746094,-148.54202270507812,-145.65512084960938,-138.41397094726562,-99.5053482055664,-86.58036804199219,-84.02627563476562,-90.57333374023438,
+        -110.12344360351562,-151.1103973388672,-146.5029754638672,-150.2567901611328,-154.2076416015625,-157.65155029296875,-160.96780395507812,-163.71536254882812,-166.5113983154297,-169.17213439941406,-171.31768798828125,-173.7549591064453,-174.98155212402344,-177.51162719726562,-179.89639282226562,-179.62094116210938,-181.6180419921875,-181.93466186523438,-178.61875915527344,-177.51344299316406,-176.43682861328125,-172.193359375,-173.71405029296875,-170.00588989257812,-166.47494506835938,-166.65277099609375,-161.64443969726562,-159.97409057617188,-156.49264526367188,-153.15109252929688,-149.26089477539062,-145.44158935546875,-146.49049377441406,-115.54188537597656,-93.51416778564453,-85.76235961914062,-87.24212646484375,-98.67387390136719,-131.00831604003906,-144.28842163085938,-146.62103271484375,-150.55291748046875,-154.29879760742188,-157.72592163085938,-160.62545776367188,-163.19659423828125,-165.7958984375,-168.1778106689453,-169.9529266357422,-172.3428497314453,-173.49557495117188,-175.82135009765625,-176.3152313232422,-177.99667358398438,-178.65386962890625,-178.84385681152344,-181.81333923339844,-179.23468017578125,-181.10821533203125,-177.50680541992188,-174.74365234375,-174.35531616210938,-177.7156982421875,-167.87738037109375,-170.73167419433594,-166.49343872070312,-163.32504272460938,-160.103515625,-156.1722412109375,-153.118408203125,-151.48764038085938,-104.24931335449219,-90.07601928710938,-86.67609405517578,-92.31657409667969,-110.17768096923828,-165.26495361328125,-153.49771118164062,-157.285400390625,-161.1112823486328,-164.65597534179688,-167.84011840820312,-170.3270721435547,-174.69725036621094,-176.01290893554688,-178.95803833007812,-181.685546875,-181.71951293945312,-183.9759063720703,-184.745849609375,-183.7364044189453,-182.7842559814453,-181.97711181640625,-179.62786865234375,-181.31802368164062,-175.78468322753906,-174.45590209960938,-178.38304138183594,-173.201171875,-167.26181030273438,-168.87229919433594,-163.1828155517578,-161.88046264648438,-158.20127868652344,-155.0328369140625,-151.1502685546875,-147.29873657226562,-146.9237518310547,-121.65253448486328,-97.37966918945312,-88.65321350097656,-89.30345153808594,-99.64423370361328,-128.31178283691406,-146.08447265625,-147.8130645751953,-151.8988037109375,-155.3572235107422,-159.06983947753906,-161.88058471679688,-164.72409057617188,-167.48028564453125,-169.7787628173828,-170.29653930664062,-174.65231323242188,-175.0094757080078,-177.006591796875,-179.11964416503906,-178.4806671142578,-184.30795288085938,-181.68272399902344,-182.13064575195312,-186.1941375732422,-186.97396850585938,-188.1195831298828,-185.92254638671875,-181.38888549804688,-178.5077667236328,-172.33045959472656,-188.3092041015625,-177.99496459960938,-171.95758056640625,-174.28012084960938,-170.54391479492188,-168.9969482421875,-177.13540649414062,-108.78945922851562,-93.27482604980469,-89.01675415039062,
+        -93.7724380493164,-110.10337829589844,-180.39109802246094,-168.09678649902344,-172.05963134765625,-175.91917419433594,-182.3512420654297,-181.3427734375,-188.47242736816406,-186.3996124267578,-215.4949188232422,-182.68495178222656,-186.8184814453125,-186.50755310058594,-188.26065063476562,-191.31552124023438,-184.68360900878906,-186.7971649169922,-184.97430419921875,-181.9649658203125,-182.54595947265625,-178.83795166015625,-177.88998413085938,-178.11825561523438,-173.36663818359375,-169.5456085205078,-171.13162231445312,-165.00318908691406,-164.02679443359375,-160.78750610351562,-157.25747680664062,-153.6698455810547,-149.64894104003906,-148.30288696289062,-127.9490737915039,-101.02949523925781,-91.28915405273438,-91.11215209960938,-100.41343688964844,-126.14523315429688,-148.550537109375,-149.5255126953125,-153.42144775390625,-157.45877075195312,-160.3266143798828,-163.93350219726562,-166.53189086914062,-168.87770080566406,-171.36581420898438,-173.64266967773438,-176.50115966796875,-176.36376953125,-179.07662963867188,-182.0347900390625,-179.9223175048828,-188.48223876953125,-183.3565673828125,-185.734375,-188.08624267578125,-191.05810546875,-188.35142517089844,-189.9156036376953,-186.0645294189453,-176.30967712402344,-174.06097412109375,-176.38406372070312,-177.0247802734375,-170.76690673828125,-169.7520294189453,-166.56134033203125,-162.88104248046875,-187.28927612304688,-113.2419204711914,-96.27364349365234,-91.14167022705078,-95.03058624267578,-109.95914459228516,-165.68528747558594,-162.96316528320312,-165.6090545654297,-169.74180603027344,-174.05447387695312,-175.6300048828125,-179.12269592285156,-180.4261932373047,-185.84451293945312,-185.91856384277344,-182.59825134277344,-194.74740600585938,-186.91348266601562,-188.44932556152344,-185.04544067382812,-186.27291870117188,-186.74029541015625,-182.24229431152344,-184.5545654296875,-180.4147491455078,-177.8482666015625,-178.97219848632812,-176.01901245117188,-171.9947509765625,-172.95640563964844,-166.9399871826172,-167.82620239257812,-163.20474243164062,-160.12762451171875,-156.4846649169922,-152.5087127685547,-150.58477783203125,-134.68736267089844,-104.54894256591797,-93.74794006347656,-92.74307250976562,-101.04788208007812,-124.32217407226562,-151.9298553466797,-151.69003295898438,-155.58267211914062,-159.533935546875,-162.63388061523438,-166.15354919433594,-168.43804931640625,-171.64837646484375,-173.58599853515625,-175.89468383789062,-177.29953002929688,-179.3251190185547,-182.89060974121094,-185.1178741455078,-182.43431091308594,-187.64434814453125,-190.6426239013672,-185.92852783203125,-187.9481201171875,-187.77418518066406,-185.2550506591797,-184.13607788085938,-182.78695678710938,-174.61097717285156,-176.92445373535156,-171.38426208496094,-172.40309143066406,-167.5443878173828,-165.19528198242188,-161.4430389404297,-157.57754516601562,-165.65167236328125,-117.70213317871094,-99.14002990722656,-93.11436462402344,-96.1508560180664,
+        -109.77926635742188,-152.93824768066406,-157.318603515625,-159.96681213378906,-163.82168579101562,-167.8079071044922,-170.7969970703125,-174.49049377441406,-176.95252990722656,-178.4193572998047,-181.82723999023438,-181.23086547851562,-187.21746826171875,-183.01092529296875,-181.6326141357422,-199.15509033203125,-196.4914093017578,-187.8533172607422,-191.7723846435547,-188.91043090820312,-195.04754638671875,-188.723876953125,-198.3515167236328,-184.84124755859375,-180.12020874023438,-176.831787109375,-172.84451293945312,-181.0395965576172,-174.49066162109375,-170.8963623046875,-169.8890838623047,-166.2724151611328,-164.09683227539062,-152.53109741210938,-118.2254638671875,-106.30850219726562,-104.4723129272461,-111.81766510009766,-132.98556518554688,-167.93746948242188,-164.06663513183594,-169.03955078125,-172.7318115234375,-175.56932067871094,-180.05953979492188,-181.2350616455078,-183.39288330078125,-184.1558074951172,-190.30859375,-190.23300170898438,-189.30319213867188,-196.94061279296875,-183.11782836914062,-183.33111572265625,-192.71231079101562,-197.3387451171875,-196.9955596923828,-199.93348693847656,-199.50741577148438,-187.9946746826172,-200.80877685546875,-191.54217529296875,-177.10028076171875,-173.7611541748047,-175.3262176513672,-179.83871459960938,-172.60865783691406,-170.98854064941406,-170.63046264648438,-166.38990783691406,-169.99009704589844,-132.48358154296875,-112.14703369140625,-105.20416259765625,-107.3990478515625,-119.81556701660156,-156.43017578125,-166.32977294921875,-167.54144287109375,-174.48284912109375,-175.411865234375,-179.44656372070312,-181.4694061279297,-186.6100311279297,-183.63882446289062,-186.46157836914062,-187.65403747558594,-192.7223358154297,-188.30580139160156,-194.12936401367188,-205.71499633789062,-195.07943725585938,-188.07614135742188,-185.89456176757812,-188.2951202392578,-194.7128448486328,-190.38331604003906,-199.39508056640625,-192.3558349609375,-182.27613830566406,-176.580322265625,-172.69119262695312,-187.9574432373047,-176.36170959472656,-171.94435119628906,-173.51873779296875,-170.48309326171875,-168.21600341796875,-161.51089477539062,-121.66057586669922,-108.56211853027344,-105.8882064819336,-112.30441284179688,-131.607177734375,-175.24050903320312,-168.19830322265625,-173.1583251953125,-177.54769897460938,-177.50347900390625,-184.73861694335938,-185.87728881835938,-187.15003967285156,-191.35939025878906,-196.29620361328125,-193.06114196777344,-189.6793212890625,-208.3614501953125,-200.40359497070312,-190.5927276611328,-198.36785888671875,
+        -194.20849609375,-190.81402587890625,-209.7244873046875,-191.02447509765625,-187.01524353027344,-191.50830078125,-192.75927734375,-176.8339385986328,-174.3151092529297,-174.23216247558594,-182.84683227539062,-173.02569580078125,-171.85304260253906,-170.66526794433594,-166.02601623535156,-167.38955688476562,-137.20928955078125,-114.88356018066406,-106.99581146240234,-108.3572006225586,-119.630615234375,-151.44970703125,-165.77195739746094,-167.1743621826172,-171.4083709716797,-174.7347869873047,-178.40264892578125,-181.24468994140625,-183.6664581298828,-189.47857666015625,-188.71795654296875,-191.4830780029297,-187.7565155029297,-201.2118377685547,-194.34906005859375,-193.9234161376953,-189.52590942382812,-190.91012573242188,-186.37901306152344,-202.20504760742188,-196.7820587158203,-193.301025390625,-195.85455322265625,-190.01602172851562,-183.58047485351562,-176.50550842285156,-173.81797790527344,-185.76486206054688,-178.55535888671875,-172.5831756591797,-175.18470764160156,-180.91705322265625,-173.81695556640625,-173.9665069580078,-125.12303161621094,-110.76469421386719,-107.24356079101562,-112.7568359375,-130.3919677734375,-186.14076232910156,-173.78707885742188,-178.86573791503906,-183.576416015625,-183.73130798339844,-187.1078643798828,-192.01461791992188,-190.5107421875,-194.02597045898438,-198.6446533203125,-197.69630432128906,-196.04632568359375,-194.02471923828125,-191.23556518554688,-187.45559692382812,-191.4099884033203,-203.97012329101562,-190.18760681152344,-191.6569366455078,-191.7861785888672,-193.09375,-190.26788330078125,-197.94630432128906,-180.06045532226562,-174.17474365234375,-178.3008575439453,-191.42758178710938,-174.69862365722656,-174.52304077148438,-183.4209442138672,-197.8968048095703,-196.01626586914062,-201.50845336914062,-201.6494903564453,-190.34951782226562,-198.66256713867188,-193.20907592773438,-193.54345703125,-188.98095703125,-198.98817443847656,-192.71131896972656,-187.33401489257812,-193.18060302734375,-198.6365966796875,-190.95657348632812,-188.50946044921875,-191.8583526611328,
+        -197.53294372558594,-196.9003143310547,-197.90724182128906,-195.82666015625,-184.39622497558594,-186.83465576171875,-190.86265563964844,-193.2113494873047,-186.2216339111328,-192.11260986328125,-191.843505859375,-194.1338348388672,-200.13710021972656,-188.01841735839844,-175.94522094726562,-173.7498321533203,-181.3997039794922,-181.57232666015625,-174.95828247070312,-177.02491760253906,-188.619384765625,-204.07611083984375,-193.95921325683594,-194.8039093017578,-191.73355102539062,-198.70684814453125,-197.73123168945312,-190.41664123535156,-188.25579833984375,-190.04019165039062,-198.8973846435547,-202.28204345703125,-195.3616485595703,-192.01461791992188,-188.57679748535156,-100,-179.5458984375,-188.31350708007812,-195.6586456298828,-191.94436645507812,-199.5150604248047,-188.09495544433594,-186.543212890625,-193.44683837890625,-202.7188720703125,-194.49105834960938,-199.7141876220703,-200.92713928222656,-197.3201141357422,-187.7057647705078,-196.5328369140625,-180.34170532226562,-174.01492309570312,-175.5030517578125]; 
+    var android_chrome_dataPoints = [];
+	for (var i = 0; i < android_chrome_sample_buffer.length; i += 1) {
+		android_chrome_dataPoints.push({
+			x: i,
+			y: android_chrome_sample_buffer[i]
+		});
+	}
+    dataSeries_android_chrome_line.dataPoints = android_chrome_dataPoints; 
+	dataSeries_user.dataPoints = dataPoints;
+	data.push(dataSeries_user);
+    data.push(dataSeries_android_chrome_line);
+	//Better to construct options first and then pass it as a parameter
+	var options = {
+		zoomEnabled: true,
+        lineThickness: 1,
+        animationEnabled: false,
+		title: {
+			text: "Audio Fingerprint"
+		},
+		axisX: {
+            title: "frequency bin",
+			labelAngle: 30,
+		},
+		axisY: {
+            title: "dB",
+			includeZero: false,
+            maximum: 0,
+            minimum: -250,
+		},
+		data: data
+	};
+
+	$("#chartContainer").CanvasJSChart(options);
+
+}
+
+// Performs fingerprint as found in https://client.a.pxi.pub/PXmssU3ZQ0/main.min.js
+var pxi_output;
+var pxi_full_buffer;
+function run_pxi_fp() {
+try {
+  if (context = new(window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100), !context) {
+    set_result("no_fp", "pxi_result");
+    pxi_output = 0;
+  }
+
+  // Create oscillator
+  pxi_oscillator = context.createOscillator();
+  pxi_oscillator.type = "triangle";
+  pxi_oscillator.frequency.value = 1e4;
+
+  // Create and configure compressor
+  pxi_compressor = context.createDynamicsCompressor();
+  pxi_compressor.threshold && (pxi_compressor.threshold.value = -50);
+  pxi_compressor.knee && (pxi_compressor.knee.value = 40);
+  pxi_compressor.ratio && (pxi_compressor.ratio.value = 12);
+  pxi_compressor.reduction && (pxi_compressor.reduction.value = -20);
+  pxi_compressor.attack && (pxi_compressor.attack.value = 0);
+  pxi_compressor.release && (pxi_compressor.release.value = .25);
+
+  // Connect nodes
+  pxi_oscillator.connect(pxi_compressor);
+  pxi_compressor.connect(context.destination);
+
+  // Start audio processing
+  pxi_oscillator.start(0);
+  context.startRendering();
+  context.oncomplete = function(evnt) {
+    pxi_output = 0;
+    var sha1 = CryptoJS.algo.SHA1.create();
+    for (var i = 0; i < evnt.renderedBuffer.length; i++) {
+        sha1.update(evnt.renderedBuffer.getChannelData(0)[i].toString());
+    }
+    hash = sha1.finalize();
+    pxi_full_buffer_hash = hash.toString(CryptoJS.enc.Hex);
+    set_result(pxi_full_buffer_hash, "pxi_full_buffer_result");
+    console.log(pxi_full_buffer_hash);
+    for (var i = 4500; 5e3 > i; i++) {
+      pxi_output += Math.abs(evnt.renderedBuffer.getChannelData(0)[i]);
+    }
+    set_result(pxi_output.toString(), "pxi_result");
+    pxi_compressor.disconnect();
+  }
+} catch (u) {
+    pxi_output = 0;
+  set_result("no_fp", "pxi_result");
+}
+}
+// End PXI fingerprint
+
+// Performs fingerprint as found in some versions of http://metrics.nt.vc/metrics.js
+function a(a, b, c) {
+    for (var d in b) "dopplerFactor" === d || "speedOfSound" === d || "currentTime" ===
+        d || "number" !== typeof b[d] && "string" !== typeof b[d] || (a[(c ? c : "") + d] = b[d]);
+    return a
+}
+
+var nt_vc_output;
+function run_nt_vc_fp() {
+try {
+    var nt_vc_context = window.AudioContext || window.webkitAudioContext;
+    if ("function" !== typeof nt_vc_context) nt_vc_output = "Not available";
+    else {
+        var f = new nt_vc_context,
+            d = f.createAnalyser();
+        nt_vc_output = a({}, f, "ac-");
+        nt_vc_output = a(nt_vc_output, f.destination, "ac-");
+        nt_vc_output = a(nt_vc_output, f.listener, "ac-");
+        nt_vc_output = a(nt_vc_output, d, "an-");
+        nt_vc_output = window.JSON.stringify(nt_vc_output, undefined, 2);
+    }
+} catch (g) {
+    nt_vc_output = 0
+}
+set_result(nt_vc_output, 'nt_vc_result')
+}
+
+// Performs fingerprint as found in https://www.cdn-net.com/cc.js
+var cc_output = [];
+function run_cc_fp() {
+var audioCtx = new(window.AudioContext || window.webkitAudioContext),
+    oscillator = audioCtx.createOscillator(),
+    analyser = audioCtx.createAnalyser(),
+    gain = audioCtx.createGain(),
+    scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+
+gain.gain.value = 0; // Disable volume
+oscillator.type = "triangle"; // Set oscillator to output triangle wave
+oscillator.connect(analyser); // Connect oscillator output to analyser input
+analyser.connect(scriptProcessor); // Connect analyser output to scriptProcessor input
+scriptProcessor.connect(gain); // Connect scriptProcessor output to gain input
+gain.connect(audioCtx.destination); // Connect gain output to audiocontext destination
+
+scriptProcessor.onaudioprocess = function (bins) {
+    bins = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(bins);
+    for (var i = 0; i < bins.length; i = i + 1) {
+        cc_output.push(bins[i]);
+    }
+    //cc_output.extend(bins);
+    analyser.disconnect();
+    scriptProcessor.disconnect();
+    gain.disconnect();
+    set_result(cc_output.slice(0, 30), 'cc_result');   
+    draw_fp(bins);
+};
+
+oscillator.start(0);
+}
+
+// Performs a hybrid of cc/pxi methods found above
+var hybrid_output = [];
+function run_hybrid_fp() {
+var audioCtx = new(window.AudioContext || window.webkitAudioContext),
+    oscillator = audioCtx.createOscillator(),
+    analyser = audioCtx.createAnalyser(),
+    gain = audioCtx.createGain(),
+    scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+// Create and configure compressor
+compressor = audioCtx.createDynamicsCompressor();
+compressor.threshold && (compressor.threshold.value = -50);
+compressor.knee && (compressor.knee.value = 40);
+compressor.ratio && (compressor.ratio.value = 12);
+compressor.reduction && (compressor.reduction.value = -20);
+compressor.attack && (compressor.attack.value = 0);
+compressor.release && (compressor.release.value = .25);
+
+gain.gain.value = 0; // Disable volume
+oscillator.type = "triangle"; // Set oscillator to output triangle wave
+oscillator.connect(compressor); // Connect oscillator output to dynamic compressor
+compressor.connect(analyser); // Connect compressor to analyser
+analyser.connect(scriptProcessor); // Connect analyser output to scriptProcessor input
+scriptProcessor.connect(gain); // Connect scriptProcessor output to gain input
+gain.connect(audioCtx.destination); // Connect gain output to audiocontext destination
+
+scriptProcessor.onaudioprocess = function (bins) {
+    bins = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(bins);
+    for (var i = 0; i < bins.length; i = i + 1) {
+        hybrid_output.push(bins[i]);
+    }
+    analyser.disconnect();
+    scriptProcessor.disconnect();
+    gain.disconnect();
+    set_result(hybrid_output.slice(0,30), 'hybrid_result');   
+    //draw_fp(bins);
+};
+
+oscillator.start(0);
+}
+
+var fontList = [
+    "Andale Mono", "Arial", "Arial Black", "Arial Hebrew", "Arial MT", "Arial Narrow", "Arial Rounded MT Bold", "Arial Unicode MS",
+    "Bitstream Vera Sans Mono", "Book Antiqua", "Bookman Old Style",
+    "Calibri", "Cambria", "Cambria Math", "Century", "Century Gothic", "Century Schoolbook", "Comic Sans", "Comic Sans MS", "Consolas", "Courier", "Courier New",
+    "Garamond", "Geneva", "Georgia",
+    "Helvetica", "Helvetica Neue",
+    "Impact",
+    "Lucida Bright", "Lucida Calligraphy", "Lucida Console", "Lucida Fax", "LUCIDA GRANDE", "Lucida Handwriting", "Lucida Sans", "Lucida Sans Typewriter", "Lucida Sans Unicode",
+    "Microsoft Sans Serif", "Monaco", "Monotype Corsiva", "MS Gothic", "MS Outlook", "MS PGothic", "MS Reference Sans Serif", "MS Sans Serif", "MS Serif", "MYRIAD", "MYRIAD PRO",
+    "Palatino", "Palatino Linotype",
+    "Segoe Print", "Segoe Script", "Segoe UI", "Segoe UI Light", "Segoe UI Semibold", "Segoe UI Symbol",
+    "Tahoma", "Times", "Times New Roman", "Times New Roman PS", "Trebuchet MS", "Ubuntu",
+    "Verdana", "Wingdings", "Wingdings 2", "Wingdings 3"
+];
+
+// Adapted from Canvas-Font fingerprinting script found at
+// go.lynxbroker.de/eat_session.js
+var CanvasFontDetector = function() {
+    // a font will be compared against all the three default fonts.
+    // and if it doesn't match all 3 then that font is not available.
+    var baseFonts = ['monospace', 'sans-serif', 'serif'];
+
+    var testString = "mimimimimimimimimimimimimimimimimimimimimimimimimimimi";
+
+    var testSize = '72px';
+
+
+    function fontFamily(fonts){
+        var result = [];
+        var arrayLength = fonts.length;
+        for (var i = 0; i < arrayLength; i++) {
+            result.push("'" + fonts[i] + "'");
+        }
+
+        result = result.join(", ");
+
+        return result;
+    }
+
+    function CanvasTester(testString, testSize){
+        var canvas = document.createElement("canvas");
+        var context = canvas.getContext("2d");
+            
+        return function() {
+            context.font = testSize + " " + fontFamily(arguments);
+            var dim = context.measureText(testString);
+            return dim.width;
+        };
+    }
+
+    var test = new CanvasTester(testString, testSize);
+
+    var defaultWidth = {};
+    var defaultHeight = {};
+    for (var index in baseFonts) {
+        //get the default width for the three base fonts
+        var width = test(baseFonts[index]);
+        defaultWidth[baseFonts[index]] = width;
+    }
+
+    function detect(font) {
+        var detected = false;
+        for (var index = 0, l = baseFonts.length; index < l; index++) {
+            var width = test(font, baseFonts[index]);
+            var matched = (width != defaultWidth[baseFonts[index]]);
+            detected = detected || matched;
+        }
+        return detected;
+    }
+
+    this.detect = detect;
+};
+
+function getInstalledFonts_usingCanvas(){
+    var installedFonts = '';
+  	var d2 = new CanvasFontDetector();
+    	
+    	
+    var index;
+	for (index = 0; index < fontList.length; ++index) {
+        var font = fontList[index];
+            
+        if(d2.detect(font)){
+		    installedFonts += fontList[index];
+            installedFonts += ';';
+        }
+	}
+        
+    return installedFonts;
+}
+
+// Font fingerprinting from github.com/Valve/fingerprintjs2/blob/master/fingerprint2.js
+function getInstalledFonts_usingJS() {
+    var that = this;
+
+    var baseFonts = ["monospace", "sans-serif", "serif"];
+
+    var testString = "mimimimimimimimimimimimimimimimimimimimimimimimimimimi";
+
+    var testSize = "72px";
+
+    var h = document.getElementsByTagName("body")[0];
+
+    var s = document.createElement("span");
+    s.style.position = "absolute";
+    s.style.left = "-9999px";
+    s.style.fontSize = testSize;
+    s.innerHTML = testString;
+    var defaultWidth = {};
+    var defaultHeight = {};
+    for (var index = 0, length = baseFonts.length; index < length; index++) {
+        //get the default width for the three base fonts
+        s.style.fontFamily = baseFonts[index];
+        h.appendChild(s);
+        defaultWidth[baseFonts[index]] = s.offsetWidth; //width for the default font
+
+        defaultHeight[baseFonts[index]] = s.offsetHeight; //height for the defualt font
+        h.removeChild(s);
+    }
+    var detect = function (font) {
+        var detected = false;
+        for (var index = 0, l = baseFonts.length; index < l; index++) {
+            s.style.fontFamily = font + "," + baseFonts[index]; // name of the font along with the base font for fallback.
+            h.appendChild(s);
+            var matched = (s.offsetWidth !== defaultWidth[baseFonts[index]] || s.offsetHeight !== defaultHeight[baseFonts[index]]);
+            h.removeChild(s);
+            detected = detected || matched;
+        }
+        return detected;
+    };
+
+    var available = [];
+    var jsInstalledFonts = '';
+    for (var i = 0, l = fontList.length; i < l; i++) {
+        if(detect(fontList[i])) {
+            jsInstalledFonts += fontList[i];
+            jsInstalledFonts += ';';       
+        }
+    }
+    return jsInstalledFonts;
+
+}
+
+// Flash font detection adapted from github.com/Valve/fingerprintjs2/blob/master/fingerprint2.js
+function getInstalledFonts_usingFlash() {
+    if (typeof window.swfobject === "undefined") {
+        console.log("No flash available");
+        return "";    
+    }
+    if(!swfobject.hasFlashPlayerVersion("9.0.0")){
+        console.log("Insufficient flash version: need at least 9.0.0");
+        return "";
+    }
+    var hiddenCallback = "___fp_swf_loaded";
+    window[hiddenCallback] = function(fonts) {
+        set_result(fonts.toString(), "flash_font_result");
+    };
+    var id = "flashfontfp";
+    var node = document.createElement("div");
+    node.setAttribute("id", id);
+    document.body.appendChild(node);
+    var flashvars = { onReady: hiddenCallback};
+    var flashparams = { allowScriptAccess: "always", menu: "false" };
+    swfobject.embedSWF("FontList.swf", id, "1", "1", "9.0.0", false, flashvars, flashparams, {});
+}
+
+
+function run_canvas_font_fp() {
+    var t0 = performance.now();
+    set_result(getInstalledFonts_usingCanvas(), 'canvas_font_result');
+    var t1 = performance.now();
+    set_result((t1-t0) + ' ms', 'canvas_font_time');
+}
+
+function run_js_font_fp() {
+    var t0 = performance.now();
+    set_result(getInstalledFonts_usingCanvas(), 'js_font_result');
+    var t1 = performance.now();
+    set_result((t1-t0) + ' ms', 'js_font_time');
+}
+
+function run_flash_font_fp() {
+    var t0 = performance.now();
+    getInstalledFonts_usingFlash(); // Callback sets result, not set here
+    var t1 = performance.now();
+    set_result((t1-t0) + ' ms', 'flash_font_time');
+}
+
+
+function run_fingerprints() {
+$("#fp_button").remove();
+$("#results").append("<p id='working'>Working...</p>");
+
+// Run the fingerprinters
+// There may be weird interference effects if the
+// prints are run sequentially with no delay, hence
+// the sleeping.
+setTimeout(function() { run_pxi_fp(); }, 0);
+setTimeout(function() { run_nt_vc_fp(); }, 1000);
+setTimeout(function() { run_cc_fp(); }, 2000);
+setTimeout(function() { run_hybrid_fp(); }, 3000);
+setTimeout(function() { run_js_font_fp(); }, 4000);
+setTimeout(function() { run_canvas_font_fp(); }, 3500);
+setTimeout(function() { run_flash_font_fp(); }, 4500);
+setTimeout(function() {
+  $.notify("Thank you!", { position:"top center"});
+  $("#working").remove();
+}, 5000);
+}
+</script>
+</body>
+</html>
+
+

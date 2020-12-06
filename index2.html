@@ -1,0 +1,33 @@
+<html>
+
+<head>
+    <title>Audio Fingerprint</title>
+    <script src="sha1.js"></script>
+    <link rel="stylesheet" href="style.css" type="text/css">
+</head>
+
+<body>
+    <button id="fp_button" type="button" onclick="getFingerPrints()">Fingerprint me!</button>
+    <div id="results">
+        <h3>AudioContext properties:</h3>
+        <pre id="context-properties"></pre>
+        <h3>Fingerprint using DynamicsCompressor (sum of buffer values):</h3>
+        <pre id="sum-buffer"></pre>
+        <h3>Fingerprint using DynamicsCompressor (hash of full buffer):</h3>
+        <pre id="full-buffer-hash"></pre>
+        <h3>Fingerprint using OscillatorNode:</h3>
+        <pre id="oscillator-node"></pre>...
+        <h3>Fingerprint using hybrid of OscillatorNode/DynamicsCompressor method:</h3>
+        <pre id="hybrid-oscillator-node"></pre>...
+        <br>
+    </div>
+
+    <script src="oscillator-all.js"></script>
+    <script src="config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-firestore.js"></script>
+    <script src="fingerprintjs2.js"></script>
+    <script src= "https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"> </script>
+</body>
+</html>
